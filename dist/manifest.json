@@ -1,0 +1,58 @@
+﻿{
+    "name":  "Lumen OS",
+    "version":  "0.1.0",
+    "built":  "2026-11-10T04:30:16",
+    "builds":  [
+                   {
+                       "chip":  "ESP32-S3",
+                       "file":  "lumen-esp32s3.bin",
+                       "app":  "lumen-esp32s3-app.bin",
+                       "size":  2480336,
+                       "parts":  [
+                                     {
+                                         "file":  "lumen-esp32s3-bootloader.bin",
+                                         "address":  0
+                                     },
+                                     {
+                                         "file":  "lumen-esp32s3-partitions.bin",
+                                         "address":  32768
+                                     },
+                                     {
+                                         "file":  "lumen-esp32s3-app.bin",
+                                         "address":  131072
+                                     }
+                                 ],
+                       "blank":  [
+                                     {
+                                         "address":  57344,
+                                         "size":  8192
+                                     }
+                                 ],
+                       "min_flash_mb":  8
+                   },
+                   {
+                       "chip":  "ESP32",
+                       "file":  "lumen-esp32.bin",
+                       "app":  "lumen-esp32-app.bin",
+                       "size":  2381776,
+                       "parts":  [
+                                     {
+                                         "file":  "lumen-esp32-bootloader.bin",
+                                         "address":  4096
+                                     },
+                                     {
+                                         "file":  "lumen-esp32-partitions.bin",
+                                         "address":  32768
+                                     },
+                                     {
+                                         "file":  "lumen-esp32-app.bin",
+                                         "address":  65536
+                                     }
+                                 ],
+                       "blank":  [
+
+                                 ],
+                       "min_flash_mb":  4
+                   }
+               ]
+}
