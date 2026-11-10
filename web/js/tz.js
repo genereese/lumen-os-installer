@@ -1,4 +1,4 @@
-// Time zones for Lumen OS. The board needs a POSIX TZ rule (it has no zone
+// Time zones for Lumen OS. The device needs a POSIX TZ rule (it has no zone
 // database), so each entry maps an IANA name to its rule, including daylight
 // saving. Shared by the desktop's Settings and the web installer.
 export const ZONES = [

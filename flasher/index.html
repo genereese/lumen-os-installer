@@ -119,6 +119,15 @@
   .nets .sig i { width: 4px; border-radius: 1px; background: color-mix(in srgb, var(--dim) 35%, transparent); }
   .nets .sig i.on { background: var(--accent); }
   .nets .empty { padding: 14px; color: var(--dim); font-size: 14px; }
+  .nets-looking { display: flex; align-items: center; gap: 10px; padding: 13px 14px; font-weight: 500; border-bottom: 1px solid var(--border); }
+  .nets-looking small { display: block; font-weight: 400; color: var(--dim); font-size: 12.5px; }
+  .nets .ghost { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid var(--border); }
+  .nets .ghost:last-child { border-bottom: 0; }
+  .nets .ghost i { display: block; height: 10px; border-radius: 5px; background: linear-gradient(90deg, color-mix(in srgb, var(--dim) 14%, transparent) 25%, color-mix(in srgb, var(--dim) 30%, transparent) 50%, color-mix(in srgb, var(--dim) 14%, transparent) 75%); background-size: 300% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+  .nets .ghost i:first-child { width: 18px; height: 14px; }
+  @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+  .nets button.fresh { animation: netin .35s cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes netin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   .done-hero { text-align: center; padding: 8px 0 4px; }
   .done-hero .check { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; color: #fff;
@@ -159,7 +168,7 @@
 <main>
   <header>
     <div class="logo" aria-hidden="true"></div>
-    <div><h1>Lumen OS Installer</h1><p class="sub">A web desktop for ESP32 boards, with MicroPython on the second core.</p></div>
+    <div><h1>Lumen OS Installer</h1><p class="sub">A MicroPython-based web desktop for ESP32 classic and S3 devices.</p></div>
   </header>
 
   <div id="unsupported" class="msg err" style="margin-bottom:16px" hidden>
@@ -178,7 +187,7 @@
       <div class="track">
         <!-- 1. Connect -->
         <div class="panel on" role="tabpanel" id="p0">
-          <h2>Connect your board</h2>
+          <h2>Connect your device</h2>
           <p class="lead">Plug the ESP32 or ESP32-S3 into this computer with a data USB cable, then choose its serial port.</p>
           <div class="row">
             <button class="primary big" id="connect">Connect</button>
@@ -186,8 +195,8 @@
           </div>
           <p id="conn-status" class="status" style="margin:12px 0 0"></p>
           <dl id="chip-info" class="info" hidden></dl>
-          <details class="hint"><summary>Board not showing up?</summary>
-            <p>Try another cable (some only carry power) and install the USB-serial driver for your board (CP210x or CH34x).
+          <details class="hint"><summary>Device not showing up?</summary>
+            <p>Try another cable (some only carry power) and install the USB-serial driver for your device (CP210x or CH34x).
             If connecting fails, hold <b>BOOT</b>, tap <b>RESET</b>/<b>EN</b>, release BOOT, then click Connect again.</p>
           </details>
         </div>
@@ -201,7 +210,7 @@
             <label class="opt"><input type="radio" name="mode" value="keep" checked>
               <span><b>Update</b><small>Replaces the firmware. Your files and settings stay.</small></span></label>
             <label class="opt"><input type="radio" name="mode" value="erase">
-              <span><b>Clean install</b><small>Erases everything first. Best for a new board.</small></span></label>
+              <span><b>Clean install</b><small>Erases everything first. Best for a new device.</small></span></label>
           </div>
           <div class="row"><button class="primary big" id="install">Install</button><span id="fw-size" class="status"></span></div>
           <div id="progress" hidden><div class="bar"><i id="bar"></i></div><div id="progress-text" class="status"></div></div>
@@ -210,7 +219,7 @@
         <!-- 3. Wi-Fi -->
         <div class="panel" role="tabpanel" id="p2">
           <h2>Set up Wi-Fi</h2>
-          <p class="lead">Save your network on the board over USB. Or skip this: the board starts a setup network
+          <p class="lead">Save your network on the device over USB. Or skip this: the device starts a setup network
             named <b id="ap-name">Lumen-XXXX</b>, and the desktop opens at <b>http://192.168.4.1</b>.</p>
           <div class="row" style="margin-bottom:12px">
             <button type="button" id="wifi-scan">Scan for networks</button>
@@ -225,7 +234,7 @@
               <label class="field">Password<input type="password" id="pass" autocomplete="off"></label>
             </div>
             <div class="row" style="margin-top:16px">
-              <button class="primary" type="submit" id="wifi-save">Connect the board</button>
+              <button class="primary" type="submit" id="wifi-save">Connect the device</button>
               <button type="button" id="wifi-check">Check connection</button>
             </div>
           </form>
@@ -237,7 +246,7 @@
           <div class="done-hero">
             <div class="check">✓</div>
             <h2>Lumen OS is ready</h2>
-            <p class="lead" id="done-text" style="margin:0">Your board is running Lumen OS.</p>
+            <p class="lead" id="done-text" style="margin:0">Your device is running Lumen OS.</p>
             <div id="done-link"></div>
             <ul class="done-list" id="done-list"></ul>
           </div>

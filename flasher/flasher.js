@@ -71,7 +71,7 @@ function finish({ connected, ssid, ip, host, ap, clock }) {
   else list.push(['📡', `Setup network <b>${esc(ap || 'Lumen-XXXX')}</b> is on: join it, then open http://192.168.4.1`]);
   if (clock) list.push(['🕒', `Clock set · ${esc(clock)}`]);
   $('done-list').innerHTML = list.map(([i, t]) => `<li><span>${i}</span><span>${t}</span></li>`).join('');
-  $('done-text').textContent = connected ? 'Open the desktop from any device on your network.' : 'Connect to the board\'s own network to finish setting it up.';
+  $('done-text').textContent = connected ? 'Open the desktop from any device on your network.' : 'Connect to the device\'s own network to finish setting it up.';
   $('done-link').innerHTML = connected
     ? `<a class="go" href="http://${esc(ip)}/" target="_blank">Open Lumen OS →</a><p class="status" style="margin:10px 0 0">or http://${esc(host)}.local/</p>`
     : '';
@@ -187,7 +187,7 @@ $('connect').onclick = async () => {
     if (build.min_flash_mb && mb && mb < build.min_flash_mb) {
       $('install').disabled = true;
       $('fw-desc').hidden = false;
-      $('fw-desc').innerHTML = `<span class="msg err" style="display:block">This board has ${esc(flashSize)} of flash, but Lumen OS for the ${esc(family)} needs at least ${build.min_flash_mb} MB. It would install but not work properly, so installing is turned off. Look for a board with ${build.min_flash_mb} MB or more (often printed on the module, e.g. "N${build.min_flash_mb}" or "N16").</span>`;
+      $('fw-desc').innerHTML = `<span class="msg err" style="display:block">This device has ${esc(flashSize)} of flash, but Lumen OS for the ${esc(family)} needs at least ${build.min_flash_mb} MB. It would install but not work properly, so installing is turned off. Look for a device with ${build.min_flash_mb} MB or more (often printed on the module, e.g. "N${build.min_flash_mb}" or "N16").</span>`;
       $('fw-size').textContent = '';
       return;
     }
@@ -221,7 +221,7 @@ function md5(image) {
 $('install').onclick = async () => {
   if (!build) return;
   const erase = document.querySelector('input[name=mode]:checked').value === 'erase';
-  if (erase && !(await dialog({ title: 'Erase everything?', text: 'A clean install erases the whole board first, including all of its files and settings. This cannot be undone.', ok: 'Erase and install', cancel: 'Cancel', danger: true }))) return;
+  if (erase && !(await dialog({ title: 'Erase everything?', text: 'A clean install erases the whole device first, including all of its files and settings. This cannot be undone.', ok: 'Erase and install', cancel: 'Cancel', danger: true }))) return;
   $('install').disabled = true;
   $('progress').hidden = false;
   const text = $('progress-text');
@@ -236,7 +236,7 @@ $('install').onclick = async () => {
     // Clean install: one image from address 0 (it blanks the settings area,
     // which the erase did anyway). Update: only the bootloader, partition
     // table and app, so Wi-Fi and other settings survive. The S3's boot-slot
-    // record is blanked too, so a board that had other firmware (with its
+    // record is blanked too, so a device that had other firmware (with its
     // own update slots) always starts Lumen.
     const files = erase || !build.parts?.length
       ? [{ data: await get(build.file), address: 0 }]
@@ -261,7 +261,7 @@ $('install').onclick = async () => {
           const tick = setInterval(() => {
             const el = (performance.now() - t0) / 1000;
             const left = Math.max(eraseGuess - el, 3) + guessWrite();
-            text.textContent = `Erasing the board… ${fmtLeft(left)}`;
+            text.textContent = `Erasing the device… ${fmtLeft(left)}`;
             bar.style.width = Math.min(15, (el / eraseGuess) * 15) + '%';
           }, 500);
           try { await loader.eraseFlash(); } finally { clearInterval(tick); }
@@ -300,7 +300,7 @@ $('install').onclick = async () => {
       }
     }
 
-    text.textContent = 'Restarting the board…';
+    text.textContent = 'Restarting the device…';
     await loader.after('hard_reset', usbOtg);
     await closeLoader();
     markDone(1);
@@ -309,11 +309,14 @@ $('install').onclick = async () => {
     await sleep(900);
     go(2);
     if (usbOtg) {
-      msg($('wifi-result'), 'This board uses native USB, so it reconnects as a new port after restarting. Click <b>Scan for networks</b> and pick the port again.', 'warn');
+      msg($('wifi-result'), 'This device uses native USB, so it reconnects as a new port after restarting. Click <b>Scan for networks</b> and pick the port again.', 'warn');
       $('wifi-scan').focus();
     } else {
       // Same port as before: give Lumen OS a moment to boot, then scan.
-      $('scan-status').textContent = 'Waiting for the board to start…';
+      // Same port as before: give Lumen OS a moment to boot, then scan. The
+      // list shows right away that a scan is coming, so nobody waits wondering.
+      showScanning('Your device is starting up; the scan begins automatically.');
+      $('scan-status').innerHTML = '<span class="spin-sm"></span>Starting the scan…';
       setTimeout(() => $('wifi-scan').click(), 3500);
     }
   } catch (e) {
@@ -333,19 +336,19 @@ const withTimeout = (p, ms, what) => Promise.race([p, new Promise((_, rej) => se
 function step(text) { $('scan-status').innerHTML = text ? `<span class="spin-sm"></span>${esc(text)}` : ''; }
 
 // Talk to Lumen OS's REPL over USB. Works right after installing, and for a
-// board that already runs Lumen (no install on this page).
+// device that already runs Lumen (no install on this page).
 async function openSerial() {
   if (serialWriter) return;
-  // "Connect" (tab 1) left the board in its bootloader: restart it into Lumen.
+  // "Connect" (tab 1) left the device in its bootloader: restart it into Lumen.
   if (loader) {
-    step('Restarting the board into Lumen OS…');
+    step('Restarting the device into Lumen OS…');
     try { await loader.after('hard_reset', usbOtg); } catch { /* reset by hand if needed */ }
     await closeLoader();
     await sleep(usbOtg ? 300 : 3000);
   }
   await closeLoader();
   if (!port || usbOtg) {
-    step('Choose the board’s USB port in the browser’s window…');
+    step('Choose the device’s USB port in the browser’s window…');
     try { port = await navigator.serial.requestPort(); } catch { throw new Error('No port was chosen.'); }
     usbOtg = false;
   }
@@ -353,7 +356,7 @@ async function openSerial() {
     step('Opening the port…');
     await withTimeout(port.open({ baudRate: 115200 }), 5000,
       'The port could not be opened. Close other programs or browser tabs that use it (another installer tab, a serial monitor) and try again.');
-    // Keep EN/IO0 released so the board keeps running (auto-reset circuits).
+    // Keep EN/IO0 released so the device keeps running (auto-reset circuits).
     await port.setSignals({ dataTerminalReady: false, requestToSend: false }).catch(() => {});
   }
   serialWriter = port.writable.getWriter();
@@ -373,7 +376,7 @@ async function openSerial() {
 }
 
 // Wait for MicroPython's ">>>" prompt. Pressing Enter shows it if Python is
-// idle; while the board is still starting we keep trying. If a program is
+// idle; while the device is still starting we keep trying. If a program is
 // running, ask before stopping it (Ctrl-C) instead of stopping it silently.
 let allowStop = false;
 async function waitPrompt(maxMs = 12000) {
@@ -389,13 +392,13 @@ async function waitPrompt(maxMs = 12000) {
     }
     if (!asked && Date.now() - t0 > 3000 && !allowStop) {
       asked = true;
-      const ok = await dialog({ title: 'A program seems to be running', text: 'The board is running a Python program, so it cannot answer right now. Stop the program to continue? (It starts again at the next restart if it runs at boot.)', ok: 'Stop it', cancel: 'Cancel' });
-      if (!ok) throw new Error('Cancelled: the program on the board was left running.');
+      const ok = await dialog({ title: 'A program seems to be running', text: 'The device is running a Python program, so it cannot answer right now. Stop the program to continue? (It starts again at the next restart if it runs at boot.)', ok: 'Stop it', cancel: 'Cancel' });
+      if (!ok) throw new Error('Cancelled: the program on the device was left running.');
       allowStop = true;
     }
     if (allowStop) { await send('\x03\x03'); await sleep(200); }
   }
-  throw new Error('Lumen OS did not answer over USB. Check that this is the right port and that the board is running Lumen OS (try unplugging it and plugging it back in).');
+  throw new Error('Lumen OS did not answer over USB. Check that this is the right port and that the device is running Lumen OS (try unplugging it and plugging it back in).');
 }
 
 async function closeSerial() {
@@ -423,7 +426,7 @@ async function replRun(code, waitMs = 4000) {
     const err = serialBuf.match(/Traceback[\s\S]*?\n(\w+Error[^\r\n]*)/);
     if (err) throw new Error(err[1]);
   }
-  throw new Error('The board did not answer in time. Is Lumen OS running on it?');
+  throw new Error('The device did not answer in time. Is Lumen OS running on it?');
 }
 
 function bars(rssi) {
@@ -431,9 +434,20 @@ function bars(rssi) {
   return `<span class="sig" title="${rssi} dBm">${[5, 8, 11, 14].map((h, i) => `<i class="${i < n ? 'on' : ''}" style="height:${h}px"></i>`).join('')}</span>`;
 }
 
+// The network list while the device scans: a clear "looking" header and
+// shimmering placeholder rows where the networks will appear.
+function showScanning(note = 'This takes a few seconds.') {
+  const box = $('nets');
+  box.hidden = false;
+  const ghost = (w) => `<div class="ghost" aria-hidden="true"><i></i><i style="width:${w}%"></i></div>`;
+  box.innerHTML = `<div class="nets-looking" role="status"><span class="spin-sm"></span><div>Looking for Wi-Fi networks near your device…<small>${esc(note)}</small></div></div>`
+    + ghost(46) + ghost(62) + ghost(38) + ghost(54);
+}
+
 $('wifi-scan').onclick = async () => {
   const btn = $('wifi-scan');
   btn.disabled = true;
+  showScanning();
   $('scan-status').textContent = 'Scanning…';
   try {
     await openSerial();
@@ -449,10 +463,10 @@ $('wifi-scan').onclick = async () => {
     const box = $('nets');
     box.hidden = false;
     if (!list.length) {
-      box.innerHTML = '<div class="msg warn" style="margin:0">No networks found. Move the board closer to the router and scan again.</div>';
+      box.innerHTML = '<div class="msg warn" style="margin:0">No networks found. Move the device closer to the router and scan again.</div>';
     } else {
       box.innerHTML = list.map(([ssid, rssi, ch, secure], i) =>
-        `<button type="button" data-i="${i}">${bars(rssi)}<span class="ssid">${esc(ssid)}</span><span class="sub">${secure ? '🔒' : 'open'} · ch ${ch}</span></button>`).join('');
+        `<button type="button" class="fresh" style="animation-delay:${Math.min(i, 8) * 40}ms" data-i="${i}">${bars(rssi)}<span class="ssid">${esc(ssid)}</span><span class="sub">${secure ? '🔒' : 'open'} · ch ${ch}</span></button>`).join('');
       box.querySelectorAll('button').forEach((b) => b.onclick = () => {
         const [ssid, , , secure] = list[b.dataset.i];
         box.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
@@ -465,6 +479,7 @@ $('wifi-scan').onclick = async () => {
     $('scan-status').textContent = `${list.length} network(s)`;
   } catch (e) {
     $('scan-status').textContent = '';
+    $('nets').hidden = true;
     msg($('wifi-result'), esc(e.message), 'err');
   } finally {
     btn.disabled = false;
@@ -480,7 +495,7 @@ $('wifi-form').onsubmit = async (e) => {
     step(`Saving ${ssid}…`);
     await replRun(`import lumen;lumen.wifi_connect(${pyStr(ssid)},${pyStr(pass)})`);
     $('pass').value = '';
-    msg($('wifi-result'), `Saved. The board is joining <b>${esc(ssid)}</b>… checking in a few seconds.`, 'ok');
+    msg($('wifi-result'), `Saved. The device is joining <b>${esc(ssid)}</b>… checking in a few seconds.`, 'ok');
     await sleep(6000);
     await checkWifi();
   } catch (err) {
@@ -496,13 +511,13 @@ async function checkWifi() {
   step('Checking the connection…');
   const ask = async () => JSON.parse((await replRun("import lumen,json;w=lumen.wifi_status();w['host']=lumen.hostname();print(json.dumps(w))")).split('\n').pop());
   let w = await ask();
-  // Opening the USB port restarts many boards (their auto-reset circuit), and
-  // right after a restart the board is still joining its network: keep asking
+  // Opening the USB port restarts many devices (their auto-reset circuit), and
+  // right after a restart the device is still joining its network: keep asking
   // for a while before saying it isn't connected.
   const t0 = Date.now(), LIMIT = 30000;
   while (!w.connected && w.ssid && Date.now() - t0 < LIMIT) {
     const left = Math.ceil((LIMIT - (Date.now() - t0)) / 1000);
-    msg($('wifi-result'), `<span class="spin-sm"></span> Waiting for the board to join <b>${esc(w.ssid)}</b>… (up to ${left} s)`, 'ok');
+    msg($('wifi-result'), `<span class="spin-sm"></span> Waiting for the device to join <b>${esc(w.ssid)}</b>… (up to ${left} s)`, 'ok');
     await sleep(1000);
     w = await ask();
   }
@@ -514,11 +529,11 @@ async function checkWifi() {
     markDone(2);
     finish({ connected: true, ssid: w.ssid, ip: w.ip, host: w.host, clock: await setClock() });
   } else {
-    msg($('wifi-result'), `Not connected to Wi-Fi${w.ssid ? `: the board could not join "${esc(w.ssid)}" within 30 seconds. Check the password and that the router is in range, then save the network again` : ' yet: choose a network above'}. Setup network <b>${esc(w.ap_ssid)}</b> ${w.ap_active ? 'is on at http://' + esc(w.ap_ip) + '/' : 'is off'}.`, 'warn');
+    msg($('wifi-result'), `Not connected to Wi-Fi${w.ssid ? `: the device could not join "${esc(w.ssid)}" within 30 seconds. Check the password and that the router is in range, then save the network again` : ' yet: choose a network above'}. Setup network <b>${esc(w.ap_ssid)}</b> ${w.ap_active ? 'is on at http://' + esc(w.ap_ip) + '/' : 'is off'}.`, 'warn');
   }
 }
 
-// Set the board's clock and time zone from this computer (it has no
+// Set the device's clock and time zone from this computer (it has no
 // battery-backed clock; it also syncs from the internet once on Wi-Fi).
 async function setClock() {
   const z = guessZone();
