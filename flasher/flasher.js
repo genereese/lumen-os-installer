@@ -117,7 +117,8 @@ function fmtLeft(sec) {
 }
 
 function msg(el, html, cls) { el.innerHTML = `<div class="msg ${cls}">${html}</div>`; }
-const slower = (b) => SPEEDS.find((s) => s < b) || 115200;
+const SAFE_BAUD = 115200;
+const slower = (b) => SPEEDS.find((s) => s < b) || SAFE_BAUD;
 
 async function loadManifest() {
   const r = await fetch('../dist/manifest.json', { cache: 'no-store' });
@@ -139,6 +140,48 @@ async function closeLoader() {
   try { await transport?.disconnect(); } catch { /* already closed */ }
   transport = null;
   loader = null;
+}
+
+// Is Lumen OS already on the device? Lumen's partition table (read from the
+// device at its address) matches this build's entry for entry - MicroPython
+// and other firmware use other sizes. A match also means Update is safe: the
+// files and settings sit where this build expects them. (The app header can't
+// tell: MicroPython builds leave its name and version blank.)
+// Returns true / false, or undefined if the flash could not be read (then
+// both install options stay).
+async function findLumen(build) {
+  const pt = build.parts?.find((p) => /-partitions\.bin$/.test(p.file));
+  if (!pt) return undefined;
+  try {
+    const want = new Uint8Array(await (await fetch(`../dist/${pt.file}`, { cache: 'no-store' })).arrayBuffer());
+    let n = 0;                                       // bytes of real entries (each 32, magic AA 50)
+    while (n + 32 <= want.length && want[n] === 0xAA && want[n + 1] === 0x50) n += 32;
+    if (!n) return undefined;
+    const have = await loader.readFlash(pt.address, n);
+    for (let i = 0; i < n; i++) if (have[i] !== want[i]) return false;
+    return true;
+  } catch (e) {
+    logLine(`Could not check for an existing Lumen OS (${e.message || e}).`);
+    return undefined;
+  }
+}
+
+// Update only makes sense over an existing Lumen OS (it keeps its files).
+let hasLumen;
+function showInstallOptions(found) {
+  hasLumen = found;
+  const keep = document.querySelector('input[name=mode][value=keep]');
+  const erase = document.querySelector('input[name=mode][value=erase]');
+  $('opt-keep').hidden = found === false;
+  if (found === false) {
+    erase.checked = true;
+    $('opt-erase').querySelector('small').textContent = 'Erases the device and installs Lumen OS.';
+  } else {
+    keep.checked = true;
+    $('opt-erase').querySelector('small').textContent = 'Erases everything first, including the files and settings on it.';
+  }
+  const note = found ? 'Lumen OS is already on this device: Update keeps its files and settings.' : '';
+  return note;
 }
 
 // ---------------------------------------------------------------- connect
@@ -168,6 +211,13 @@ $('connect').onclick = async () => {
     // Chip family ("ESP32", "ESP32-S3"); main() returns the full part name.
     const family = (loader.chip.CHIP_NAME || chipName.replace(/\s*\(.*$/, '')).trim().toUpperCase();
     build = manifest.builds.find((b) => b.chip.toUpperCase() === family);
+    // Classic ESP32 boards (CP210x / CH340 USB chips) often fail part-way at
+    // faster speeds and need several tries: write them at the safe speed.
+    if (family === 'ESP32' && baud > SAFE_BAUD) {
+      $('conn-status').textContent = 'Switching to the safe speed for ESP32…';
+      logLine(`ESP32: using the safe speed (${SAFE_BAUD} baud).`);
+      await openLoader(SAFE_BAUD);
+    }
     const info = $('chip-info');
     info.innerHTML = `<dt>Chip</dt><dd>${esc(chipName)}</dd><dt>Flash</dt><dd>${esc(flashSize)}</dd><dt>MAC</dt><dd>${esc(mac)}</dd><dt>Speed</dt><dd>${baud} baud</dd>`;
     info.hidden = false;
@@ -192,14 +242,16 @@ $('connect').onclick = async () => {
       return;
     }
     $('install').disabled = false;
-    $('fw-desc').textContent = family === 'ESP32-C3' ? 'ESP32-C3 has a single core: MicroPython shares it with the OS at a lower priority.' : '';
+    const found = await findLumen(build);
+    const note = showInstallOptions(found);
+    $('fw-desc').textContent = [note, family === 'ESP32-C3' ? 'ESP32-C3 has a single core: MicroPython shares it with the OS at a lower priority.' : ''].filter(Boolean).join(' ');
     $('fw-desc').hidden = !$('fw-desc').textContent;
     $('fw-size').textContent = `${(build.size / 1048576).toFixed(2)} MB`;
   } catch (e) {
     $('conn-status').textContent = '';
     logLine('Error: ' + (e.message || e));
     if (!$('log-box').open) toggleDetails($('log-box'), true);
-    dialog({ title: 'Could not connect', text: `${e.message || e}. Try another cable or USB port, or hold BOOT while tapping RESET and try again.`, ok: 'OK' });
+    dialog({ title: 'Could Not Connect', text: `${e.message || e}. Try another cable or USB port, or hold BOOT while tapping RESET and try again.`, ok: 'OK' });
     await closeLoader();
     port = null;   // let the user pick a different port next time
     $('connect').disabled = false;
@@ -221,7 +273,8 @@ function md5(image) {
 $('install').onclick = async () => {
   if (!build) return;
   const erase = document.querySelector('input[name=mode]:checked').value === 'erase';
-  if (erase && !(await dialog({ title: 'Erase everything?', text: 'A clean install erases the whole device first, including all of its files and settings. This cannot be undone.', ok: 'Erase and install', cancel: 'Cancel', danger: true }))) return;
+  // Nothing of Lumen's to lose on a device without it: no warning there.
+  if (erase && hasLumen !== false && !(await dialog({ title: 'Erase everything?', text: 'A clean install erases the whole device first, including all of its files and settings. This cannot be undone.', ok: 'Erase and Install', cancel: 'Cancel', danger: true }))) return;
   $('install').disabled = true;
   $('progress').hidden = false;
   const text = $('progress-text');
@@ -392,7 +445,7 @@ async function waitPrompt(maxMs = 12000) {
     }
     if (!asked && Date.now() - t0 > 3000 && !allowStop) {
       asked = true;
-      const ok = await dialog({ title: 'A program seems to be running', text: 'The device is running a Python program, so it cannot answer right now. Stop the program to continue? (It starts again at the next restart if it runs at boot.)', ok: 'Stop it', cancel: 'Cancel' });
+      const ok = await dialog({ title: 'A Program Seems to Be Running', text: 'The device is running a Python program, so it cannot answer right now. Stop the program to continue? (It starts again at the next restart if it runs at boot.)', ok: 'Stop It', cancel: 'Cancel' });
       if (!ok) throw new Error('Cancelled: the program on the device was left running.');
       allowStop = true;
     }

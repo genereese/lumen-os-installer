@@ -96,6 +96,7 @@
 
   .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   @media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
+  label.opt[hidden] { display: none; }
   label.opt { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1.5px solid var(--border); border-radius: 14px; cursor: pointer; transition: border-color .2s, background .2s; }
   label.opt input { margin-top: 3px; accent-color: var(--accent); }
   label.opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
@@ -187,7 +188,7 @@
       <div class="track">
         <!-- 1. Connect -->
         <div class="panel on" role="tabpanel" id="p0">
-          <h2>Connect your device</h2>
+          <h2>Connect Your Device</h2>
           <p class="lead">Plug the ESP32 or ESP32-S3 into this computer with a data USB cable, then choose its serial port.</p>
           <div class="row">
             <button class="primary big" id="connect">Connect</button>
@@ -207,10 +208,10 @@
           <p class="lead">Lumen OS for your chip is ready. Choose how to install it.</p>
           <p class="lead" id="fw-desc" hidden></p>
           <div class="opts">
-            <label class="opt"><input type="radio" name="mode" value="keep" checked>
+            <label class="opt" id="opt-keep"><input type="radio" name="mode" value="keep" checked>
               <span><b>Update</b><small>Replaces the firmware. Your files and settings stay.</small></span></label>
-            <label class="opt"><input type="radio" name="mode" value="erase">
-              <span><b>Clean install</b><small>Erases everything first. Best for a new device.</small></span></label>
+            <label class="opt" id="opt-erase"><input type="radio" name="mode" value="erase">
+              <span><b>Clean Install</b><small>Erases everything first. Best for a new device.</small></span></label>
           </div>
           <div class="row"><button class="primary big" id="install">Install</button><span id="fw-size" class="status"></span></div>
           <div id="progress" hidden><div class="bar"><i id="bar"></i></div><div id="progress-text" class="status"></div></div>
@@ -218,11 +219,11 @@
 
         <!-- 3. Wi-Fi -->
         <div class="panel" role="tabpanel" id="p2">
-          <h2>Set up Wi-Fi</h2>
+          <h2>Set Up Wi-Fi</h2>
           <p class="lead">Save your network on the device over USB. Or skip this: the device starts a setup network
             named <b id="ap-name">Lumen-XXXX</b>, and the desktop opens at <b>http://192.168.4.1</b>.</p>
           <div class="row" style="margin-bottom:12px">
-            <button type="button" id="wifi-scan">Scan for networks</button>
+            <button type="button" id="wifi-scan">Scan for Networks</button>
             <span id="scan-status" class="status"></span>
             <span class="spacer"></span>
             <button type="button" class="link" id="wifi-skip">Skip</button>
@@ -234,8 +235,8 @@
               <label class="field">Password<input type="password" id="pass" autocomplete="off"></label>
             </div>
             <div class="row" style="margin-top:16px">
-              <button class="primary" type="submit" id="wifi-save">Connect the device</button>
-              <button type="button" id="wifi-check">Check connection</button>
+              <button class="primary" type="submit" id="wifi-save">Connect the Device</button>
+              <button type="button" id="wifi-check">Check Connection</button>
             </div>
           </form>
           <div id="wifi-result"></div>
@@ -245,7 +246,7 @@
         <div class="panel" role="tabpanel" id="p3">
           <div class="done-hero">
             <div class="check">✓</div>
-            <h2>Lumen OS is ready</h2>
+            <h2>Lumen OS Is Ready</h2>
             <p class="lead" id="done-text" style="margin:0">Your device is running Lumen OS.</p>
             <div id="done-link"></div>
             <ul class="done-list" id="done-list"></ul>
@@ -255,7 +256,7 @@
     </div>
   </section>
 
-  <details class="log-card" id="log-box"><summary>Device log</summary><pre class="log" id="log" aria-live="polite"></pre></details>
+  <details class="log-card" id="log-box"><summary>Device Log</summary><pre class="log" id="log" aria-live="polite"></pre></details>
   <p class="foot">Firmware images are loaded from <code>../dist/</code>. Build them with <code>tools\build.ps1</code>.</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
