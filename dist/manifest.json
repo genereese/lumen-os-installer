@@ -1,13 +1,13 @@
 ﻿{
     "name":  "Lumen OS",
     "version":  "0.1.0",
-    "built":  "2026-11-12T03:38:06",
+    "built":  "2026-11-12T04:51:12",
     "builds":  [
                    {
                        "chip":  "ESP32-S3",
                        "file":  "lumen-esp32s3.bin",
                        "app":  "lumen-esp32s3-app.bin",
-                       "size":  2654336,
+                       "size":  2655376,
                        "parts":  [
                                      {
                                          "file":  "lumen-esp32s3-bootloader.bin",
@@ -34,7 +34,7 @@
                        "chip":  "ESP32",
                        "file":  "lumen-esp32.bin",
                        "app":  "lumen-esp32-app.bin",
-                       "size":  2555216,
+                       "size":  2556256,
                        "parts":  [
                                      {
                                          "file":  "lumen-esp32-bootloader.bin",
@@ -58,7 +58,7 @@
                        "chip":  "ESP32-C3",
                        "file":  "lumen-esp32c3.bin",
                        "app":  "lumen-esp32c3-app.bin",
-                       "size":  2515936,
+                       "size":  2516976,
                        "parts":  [
                                      {
                                          "file":  "lumen-esp32c3-bootloader.bin",
