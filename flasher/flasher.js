@@ -126,12 +126,20 @@ async function loadManifest() {
   return r.json();
 }
 
+// How to reach the bootloader: 'default_reset' switches the chip into
+// flashing mode with the USB adapter's control lines; 'no_reset' talks to a
+// chip that is already waiting (put there by hand with BOOT + EN). Some board
+// and USB port combinations can't do the automatic switch: the two lines
+// can't change close enough together for the board's reset circuit.
+let resetMode = 'default_reset';
+const manualPorts = new WeakSet();          // ports that needed BOOT + EN this session
+
 // (Re)open the bootloader connection on the already-chosen port.
 async function openLoader(speed) {
   await closeLoader();
   transport = new Transport(port, true);
   loader = new ESPLoader({ transport, baudrate: speed, terminal, debugLogging: false });
-  chipName = await loader.main();
+  chipName = await loader.main(resetMode);
   baud = speed;
   usbOtg = await loader.usesUsbOtg().catch(() => false);
 }
@@ -184,6 +192,34 @@ function showInstallOptions(found) {
   return note;
 }
 
+// Put the board into flashing mode by hand, then connect without resetting it.
+// Throws if the user cancels or the board still doesn't answer.
+async function connectByHand() {
+  for (let tries = 1; ; tries++) {
+    await closeLoader();
+    const go = await dialog({
+      title: tries === 1 ? 'Put the Device in Flashing Mode' : 'Still Not in Flashing Mode',
+      text: (tries === 1
+        ? 'This device couldn\u2019t be switched to flashing mode automatically on this USB port. '
+        : 'The device didn\u2019t answer. ')
+        + 'On the board: hold the BOOT button, press and release EN (or RST), then let go of BOOT. Then click Connect.',
+      ok: 'Connect', cancel: 'Cancel',
+    });
+    if (!go) throw new Error('Cancelled: the device was not put in flashing mode');
+    $('conn-status').textContent = 'Connecting…';
+    resetMode = 'no_reset';
+    try {
+      await openLoader(SAFE_BAUD);
+      manualPorts.add(port);
+      logLine('Connected after BOOT + EN (this port will skip the automatic switch next time).');
+      return;
+    } catch (e) {
+      logLine(`Connecting by hand failed (${e.message || e}).`);
+      if (tries >= 3) throw e;
+    }
+  }
+}
+
 // ---------------------------------------------------------------- connect
 $('connect').onclick = async () => {
   $('connect').disabled = true;
@@ -193,17 +229,27 @@ $('connect').onclick = async () => {
     await closeSerial();
     if (!port) port = await navigator.serial.requestPort();
     $('conn-status').textContent = 'Talking to the bootloader…';
+    resetMode = 'default_reset';
     let speed = 460800;                   // steps down automatically if the link is unreliable
-    for (let attempt = 1; ; attempt++) {
-      try {
-        await openLoader(speed);
-        break;
-      } catch (e) {
-        if (attempt >= 3) throw e;
-        speed = slower(speed);
-        logLine(`Connect attempt ${attempt} failed (${e.message || e}); retrying at ${speed} baud…`);
-        $('conn-status').textContent = `Retrying (${attempt + 1}/3)…`;
-        await sleep(600);
+    if (manualPorts.has(port)) {
+      await connectByHand();              // this port needed BOOT + EN before: go straight there
+    } else {
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await openLoader(speed);
+          break;
+        } catch (e) {
+          if (attempt >= 3) {
+            // The automatic switch didn't work: show how to do it by hand.
+            logLine(`Automatic connection failed (${e.message || e}).`);
+            await connectByHand();
+            break;
+          }
+          speed = slower(speed);
+          logLine(`Connect attempt ${attempt} failed (${e.message || e}); retrying at ${speed} baud…`);
+          $('conn-status').textContent = `Retrying (${attempt + 1}/3)…`;
+          await sleep(600);
+        }
       }
     }
     const flashSize = await loader.detectFlashSize().catch(() => '?');
@@ -251,7 +297,9 @@ $('connect').onclick = async () => {
     $('conn-status').textContent = '';
     logLine('Error: ' + (e.message || e));
     if (!$('log-box').open) toggleDetails($('log-box'), true);
-    dialog({ title: 'Could Not Connect', text: `${e.message || e}. Try another cable or USB port, or hold BOOT while tapping RESET and try again.`, ok: 'OK' });
+    if (!/^Cancelled/.test(e.message || '')) {
+      dialog({ title: 'Could Not Connect', text: `${e.message || e}. Try another USB cable or port.`, ok: 'OK' });
+    }
     await closeLoader();
     port = null;   // let the user pick a different port next time
     $('connect').disabled = false;
