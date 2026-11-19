@@ -30,8 +30,6 @@
   html, body { background: #0b0d1c; }
   header h1 { color: #f3f5ff; text-shadow: 0 2px 18px rgba(0,0,0,.45); }
   header .sub { color: rgba(225,230,255,.72); }
-  .foot { color: rgba(225,230,255,.55) !important; }
-  .foot code { color: rgba(225,230,255,.8); }
   .card, .log-card { box-shadow: 0 24px 60px rgba(0,0,0,.45); }
   #unsupported { position: relative; }
   header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
@@ -145,7 +143,6 @@
   pre.log { font: 12.5px/1.45 var(--mono); background: #0f121a; color: #cfd5e3; border-radius: 10px; padding: 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; margin: 10px 0 0; }
   a { color: var(--accent); }
   code { font: 13px var(--mono); }
-  .foot { text-align: center; font-size: 13px; color: var(--dim); margin-top: 18px; }
   .spin-sm { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 4px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -257,7 +254,6 @@
   </section>
 
   <details class="log-card" id="log-box"><summary>Device Log</summary><pre class="log" id="log" aria-live="polite"></pre></details>
-  <p class="foot">Firmware images are loaded from <code>../dist/</code>. Build them with <code>tools\build.ps1</code>.</p>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script type="module" src="flasher.js"></script>
